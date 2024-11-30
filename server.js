@@ -150,6 +150,62 @@ app.post('/message', (req, res) => {
     });
   }
 
+  // If the user asks "How many sales in [year] [month]"
+  else if (userMessage.includes("how many sales in")) {
+    // Extract the year and month from the user input
+    const matches = userMessage.match(/how many sales in (\d{4})(?: (\w+))?/);
+
+    if (matches) {
+      const year = matches[1]; // e.g., "2019"
+      const monthName = matches[2]; // e.g., "January"
+      let month = null;
+
+      // Convert month name to number
+      if (monthName) {
+        month = getMonthNumber(monthName); // Assuming getMonthNumber function is defined
+      }
+
+      // Query to get total sales amount, total transaآctions, and unique customers
+      let query = `
+        SELECT MONTH(Date) AS month, SUM(Amount) AS totalSalesAmount, COUNT(*) AS totalTransactions, COUNT(DISTINCT OID) AS uniqueCustomers
+        FROM transaction
+        WHERE YEAR(Date) = ?
+      `;
+
+      const queryParams = [year];
+
+      if (month) {
+        query += ` AND MONTH(Date) = ?`;
+        queryParams.push(month);
+      }
+
+      query += ` GROUP BY MONTH(Date) ORDER BY MONTH(Date);`;
+
+      db.query(query, queryParams, (err, results) => {
+        if (err) {
+          console.error('Error querying the database:', err);
+          return res.json({ reply: "Sorry, there was an issue with the database." });
+        }
+
+        let reply = `📊 **Sales Report for ${year}**\n`;
+        let totalSales = 0;
+
+        results.forEach(row => {
+          reply += `🗓️ **Month ${row.month}:**\n`;
+          reply += `💰 **Total Sales:** ${row.totalSalesAmount.toFixed(2)}\n`;
+          reply += `🛍️ **Total Transactions:** ${row.totalTransactions}\n`;
+          reply += `👥 **Unique Customers:** ${row.uniqueCustomers}\n\n`;
+          totalSales += row.totalSalesAmount;
+        });
+
+        reply += `🔹 **Total Sales for ${year}:** 💰 **${totalSales.toFixed(2)}**`;
+        return res.json({ reply: reply });
+      });
+    } else {
+      return res.json({ reply: "Sorry, I couldn't understand the year and month. Please try again with the correct format." });
+    }
+  }
+
   // If the user asks something else
   else {
     return res.json({ reply: "Sorry, I didn't understand that. Can you please ask again?" });

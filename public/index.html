@@ -129,6 +129,8 @@
   </div>
 
   <script>
+    let isFirstMessage = true; // Flag to check if it's the first message
+
     function sendMessage() {
       let input = document.getElementById("user-input").value;
       if (input === "") return;
@@ -136,6 +138,12 @@
       // Show user message
       let chatBox = document.getElementById("chat-box");
       chatBox.innerHTML += `<div class="user-msg"><strong>You:</strong> ${input}</div>`;
+
+      // Check if it's the first message
+      if (isFirstMessage) {
+        chatBox.innerHTML += `<div class="bot-msg"><strong>Bot:</strong> Hello! Hope you are well. I am VPL Chatbot. How can I assist you?</div>`;
+        isFirstMessage = false; // Set the flag to false after the first message
+      }
 
       // Send message to server
       fetch('http://localhost:3000/message', {
@@ -147,8 +155,11 @@
       })
       .then(response => response.json())
       .then(data => {
-        // Show bot response
-        chatBox.innerHTML += `<div class="bot-msg"><strong>Bot:</strong> ${data.reply}</div>`;
+        // Show bot response line by line
+        const messages = data.reply.split('\n');
+        messages.forEach(msg => {
+          chatBox.innerHTML += `<div class="bot-msg"><strong>Bot:</strong> ${msg}</div>`;
+        });
         document.getElementById("user-input").value = "";
         chatBox.scrollTop = chatBox.scrollHeight;
       });
